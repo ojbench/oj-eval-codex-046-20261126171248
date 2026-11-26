@@ -108,9 +108,11 @@ def main():
     # Submit C++ source file
     submit_parser = subparsers.add_parser("submit", help="Submit a C++ source file")
     submit_parser.add_argument("--problem-id", type=int, required=True, help="Problem ID")
-    submit_parser.add_argument("--language", type=str, required=True,
+    submit_parser.add_argument("--git-url", type=str,
+                               help="Git repository URL to submit")
+    submit_parser.add_argument("--language", type=str, default="git",
                                help="Programming language (e.g., cpp, c, python)")
-    submit_parser.add_argument("--code-file", type=str, required=True,
+    submit_parser.add_argument("--code-file", type=str,
                                help="Path to the source code file")
 
     # Sub-command for checking submission status
@@ -130,6 +132,14 @@ def main():
     client = ACMOJClient(args.token)
 
     if args.command == "submit":
+        if args.git_url:
+            result = client.submit_git(args.problem_id, args.git_url)
+            if not result:
+                exit(1)
+            print(json.dumps(result))
+            return
+        if not args.code_file:
+            parser.error("submit requires --git-url or --code-file")
         try:
             with open(args.code_file, 'r', encoding='utf-8') as f:
                 code_text = f.read()
@@ -140,7 +150,9 @@ def main():
             print(f"Error: Failed to read code file: {e}")
             exit(1)
 
-        result = client.submit_code(args.problem_id, args.language, code_text)
+        if args.language != "git":
+            parser.error("this judge client supports Git submissions only")
+        result = client.submit_git(args.problem_id, code_text.strip())
 
     elif args.command == "status":
         result = client.get_submission_detail(args.submission_id)
