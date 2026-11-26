@@ -64,7 +64,7 @@ class ACMOJClient:
 
         except requests.exceptions.RequestException as e:
             print(f"API Request failed: {e}")
-            if 'response' in locals() and response:
+            if 'response' in locals():
                 print(f"Response text: {response.text}")
             return None
 
@@ -89,6 +89,13 @@ class ACMOJClient:
         if result and 'id' in result:
             self._save_submission_id(result['id'])
 
+        return result
+
+    def submit_code(self, problem_id: int, language: str, code: str) -> Optional[Dict]:
+        result = self._make_request("POST", f"/problem/{problem_id}/submit",
+                                    data={"language": language, "code": code})
+        if result and 'id' in result:
+            self._save_submission_id(result['id'])
         return result
 
     def get_submission_detail(self, submission_id: int) -> Optional[Dict]:
@@ -150,9 +157,7 @@ def main():
             print(f"Error: Failed to read code file: {e}")
             exit(1)
 
-        if args.language != "git":
-            parser.error("this judge client supports Git submissions only")
-        result = client.submit_git(args.problem_id, code_text.strip())
+        result = client.submit_code(args.problem_id, args.language, code_text)
 
     elif args.command == "status":
         result = client.get_submission_detail(args.submission_id)
